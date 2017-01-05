@@ -1,0 +1,8 @@
+.ipynb_checkpoints/
+junk.*
+temp.*
+.~lock*
+temp/
+__pycache__/
+venv/*
+*.pyc
