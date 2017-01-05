@@ -1,4 +1,4 @@
-# Reconcile Notes from Nature Transcripts
+# Text Mining Uses of Biodiversity Informatics in Research Literature 
 
 ## Installation
 
