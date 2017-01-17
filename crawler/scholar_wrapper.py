@@ -36,14 +36,9 @@ def scholar():
                 cmd = build_command(term=term, start=start)
                 output = subprocess.check_output(cmd, shell=True)
                 print(cmd)
-                # print(output)
                 csv_file.write(output)
                 delay = random.randint(DELAY_MIN, DELAY_MAX)
                 time.sleep(delay)
-                # break
-                # if start > 10:
-                #     break
-        # break
 
 
 if __name__ == '__main__':
