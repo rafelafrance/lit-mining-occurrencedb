@@ -6,3 +6,5 @@ temp/
 __pycache__/
 venv/*
 *.pyc
+tor*
+google_scholar*
