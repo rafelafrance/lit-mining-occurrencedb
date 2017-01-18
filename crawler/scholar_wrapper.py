@@ -34,8 +34,8 @@ def scholar():
         with open(file_name, 'wb') as csv_file:
             for start in range(0, max_results, PAGE_COUNT):
                 cmd = build_command(term=term, start=start)
-                output = subprocess.check_output(cmd, shell=True)
                 print(cmd)
+                output = subprocess.check_output(cmd, shell=True)
                 csv_file.write(output)
                 delay = random.randint(DELAY_MIN, DELAY_MAX)
                 time.sleep(delay)
