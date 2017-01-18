@@ -3,6 +3,8 @@
 This module provides classes for querying Google Scholar and parsing
 returned results. It currently *only* processes the first results
 page. It is not a recursive crawler.
+
+Modified to take a "--start <count>" argument so that we can query more than one page.
 """
 # ChangeLog
 # ---------
