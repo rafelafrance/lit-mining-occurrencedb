@@ -4,8 +4,7 @@ temp.*
 .~lock*
 temp/
 __pycache__/
-venv/*
-old/*
+venv/
+old/
 *.pyc
-tor*
-google_scholar*
+data/
