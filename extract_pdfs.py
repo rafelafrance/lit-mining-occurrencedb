@@ -39,7 +39,7 @@ def parse_command_line():
                        help='The PDF files are in this directory.')
 
     group.add_argument('-z', '--zip-file',
-                       help='The PDF files are in a zip archive .')
+                       help='The PDF files are in this zip file.')
 
     return parser.parse_args()
 
@@ -91,7 +91,8 @@ if __name__ == '__main__':
         pdf_paths = get_pdf_paths(pdf_dir)
 
         for i, pdf_path in enumerate(pdf_paths):
-            print('Extracting:', pdf_path)
+            if not args.quiet:
+                print('Extracting:', pdf_path)
             pdf_to_text(args, pdf_path, i)
 
     print('Extracted: {} PDFs'.format(len(pdf_paths)))
