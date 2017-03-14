@@ -17,7 +17,8 @@ def parse_command_line():
     """Process command-line arguments."""
 
     description = """Extract the PDF files and convert them into text. They
-    will be placed into the given output directory.
+    will be placed into the given output directory. This utility depends on
+    the external program "xpdf" specifically "pdftotext".
     """
 
     parser = argparse.ArgumentParser(
