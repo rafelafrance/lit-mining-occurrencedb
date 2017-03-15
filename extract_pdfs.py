@@ -4,7 +4,6 @@ place them into the given output directory.
 
 import os
 import io
-import glob
 import zipfile
 import fnmatch
 import tempfile
@@ -91,7 +90,7 @@ if __name__ == '__main__':
 
         pdf_paths = get_pdf_paths(pdf_dir)
 
-        for i, pdf_path in enumerate(pdf_paths):
+        for i, pdf_path in enumerate(pdf_paths, 1):
             if not args.quiet:
                 print('Extracting:', pdf_path)
             pdf_to_text(args, pdf_path, i)
