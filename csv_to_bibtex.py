@@ -42,6 +42,12 @@ def add_optionals(row, optionals, entry):
         if row.get(csv):
             entry[bib] = row[csv]
 
+    if 'pages' in entry:
+        entry['pages'] = re.sub('-', '--', entry['pages'])
+
+    file_field(row, entry)
+    keywords(row, entry)
+
 
 def add_requireds(row, entry_type):
     """Build an entry with the required fields"""
@@ -61,16 +67,15 @@ def article(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
         'pages': 'Pages',
         'month': 'Month',
         'volume': 'Volume',
+        'abstract': 'Abstract Note',
         'journal': 'Publication Title',
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -83,16 +88,15 @@ def inproceedings(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
         'pages': 'Pages',
         'volume': 'Volume',
+        'abstract': 'Abstract Note',
         'publisher': 'Publisher',
         'booktitle': 'Publication Title',
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -105,15 +109,14 @@ def book(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
         'pages': 'Pages',
         'editor': 'Editor',
+        'abstract': 'Abstract Note',
         'publisher': 'Publisher',
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -126,16 +129,15 @@ def incollection(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
         'pages': 'Pages',
         'editor': 'Editor',
+        'abstract': 'Abstract Note',
         'publisher': 'Publisher',
         'booktitle': 'Publication Title',
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -148,12 +150,11 @@ def techreport(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
+        'abstract': 'Abstract Note',
         'institution': 'Publisher'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -166,12 +167,11 @@ def phdthesis(row):
     optionals = {
         'url': 'Url',
         'note': 'Note',
+        'date': 'Date',
         'year': 'Publication Year',
-        'school': 'Publisher'}
+        'school': 'Publisher',
+        'abstract': 'Abstract Note'}
     add_optionals(row, optionals, entry)
-
-    file_field(row, entry)
-    keywords(row, entry)
 
     return entry
 
@@ -191,49 +191,50 @@ def keywords(row, entry):
 def file_field(row, entry):
     """Build the bibtex file field."""
 
-    return entry['file'] = row['File Attachments']
+    # entry['file'] = row['File Attachments']
 
-    # This is one try
-    # if not row['File Attachments']:
-    #     return
-    #
-    # url = urlparse(row['Url'])
-    #
-    # attachments = []
-    # attachment_list = row['File Attachments'].split(';')
-    # for i, attachment in enumerate(attachment_list):
-    #     attachment = attachment.strip()
-    #
-    #     if attachment.startswith('dn='):
-    #         continue
-    #     elif attachment.startswith('res='):
-    #         if attachment.endswith('.html'):
-    #             attachment += ':text/html'
-    #         continue
-    #
-    #     file_name = re.split(r'[/\\]\s*', attachment)[-1]
-    #     _, ext = os.path.splitext(attachment.lower())
-    #     attachment = re.sub(r'\\', r'\\\\', attachment)
-    #
-    #     if ext == '.pdf':
-    #        attachment = '{}:{}:application/pdf'.format(file_name, attachment)
-    #     elif ext == '.html':
-    #         attachment = '{}:{}:text/html'.format(file_name, attachment)
+    if not row['File Attachments']:
+        return
 
-    # This stuff didn't work either
-    # if ext == '.pdf' and len(attachment_list) > 1 and not i:
-    #     attachment = '[PDF] {}:{}:application/pdf'.format(
-    #         url.netloc, attachment)
-    # elif ext == '.pdf':
-    #     attachment = 'Snapshot:{}:application/pdf'.format(attachment)
-    # elif ext == '.html' and len(attachment_list) > 1 and not i:
-    #     attachment = '[HTML] {}:{}:text/html'.format(
-    #         url.netloc, attachment)
-    # elif ext == '.html':
-    #     attachment = 'Snapshot:{}:text/html'.format(attachment)
-    # attachments.append(attachment)
-    #
-    # entry['file'] = ';'.join(attachments)
+    url = urlparse(row['Url'])
+
+    attachments = []
+    attachment_list = row['File Attachments'].split(';')
+    for i, attachment in enumerate(attachment_list):
+        attachment = attachment.strip()
+
+        if attachment.startswith('dn='):
+            continue
+        elif attachment.startswith('res='):
+            if attachment.endswith('.html'):
+                attachment += ':text/html'
+            continue
+
+        file_name = re.split(r'[/\\]\s*', attachment)[-1]
+        _, ext = os.path.splitext(attachment.lower())
+        attachment = re.sub(r'\\', r'\\\\', attachment)
+        attachment = re.sub(r':', r'\\:', attachment)
+
+        if ext == '.pdf':
+            attachment = '{}:{}:application/pdf'.format(file_name, attachment)
+        elif ext == '.html':
+            attachment = '{}:{}:text/html'.format(file_name, attachment)
+
+        # This stuff didn't work
+        # if ext == '.pdf' and len(attachment_list) > 1 and not i:
+        #     attachment = '[PDF] {}:{}:application/pdf'.format(
+        #         url.netloc, attachment)
+        # elif ext == '.pdf':
+        #     attachment = 'Snapshot:{}:application/pdf'.format(attachment)
+        # elif ext == '.html' and len(attachment_list) > 1 and not i:
+        #     attachment = '[HTML] {}:{}:text/html'.format(
+        #         url.netloc, attachment)
+        # elif ext == '.html':
+        #     attachment = 'Snapshot:{}:text/html'.format(attachment)
+
+        attachments.append(attachment)
+
+    entry['file'] = ';'.join(attachments)
 
 
 def key(row):
