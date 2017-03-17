@@ -220,7 +220,6 @@ def file_field(row, entry):
         elif ext == '.html':
             attachment = '{}:{}:text/html'.format(file_name, attachment)
 
-        # This stuff didn't work
         # if ext == '.pdf' and len(attachment_list) > 1 and not i:
         #     attachment = '[PDF] {}:{}:application/pdf'.format(
         #         url.netloc, attachment)
