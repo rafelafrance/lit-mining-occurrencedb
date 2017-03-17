@@ -1,6 +1,7 @@
 """A simple utility to convert csv files to bibtex."""
 
 import re
+import os
 import csv
 import sys
 import argparse
@@ -68,6 +69,8 @@ def article(row):
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
 
+    update_file(entry)
+
     return entry
 
 
@@ -88,6 +91,8 @@ def inproceedings(row):
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
 
+    update_file(entry)
+
     return entry
 
 
@@ -105,6 +110,8 @@ def book(row):
         'publisher': 'Publisher',
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
+
+    update_file(entry)
 
     return entry
 
@@ -125,6 +132,8 @@ def incollection(row):
         'shorttitle': 'Short Title'}
     add_optionals(row, optionals, entry)
 
+    update_file(entry)
+
     return entry
 
 
@@ -140,6 +149,8 @@ def techreport(row):
         'file': 'File Attachments',
         'institution': 'Publisher'}
     add_optionals(row, optionals, entry)
+
+    update_file(entry)
 
     return entry
 
@@ -157,7 +168,30 @@ def phdthesis(row):
         'school': 'Publisher'}
     add_optionals(row, optionals, entry)
 
+    update_file(entry)
+
     return entry
+
+
+def update_file(entry):
+    """Convert the entry's file into a format that includes mime info."""
+
+    if not entry.get('file'):
+        return
+
+    root, ext = os.path.splitext(entry['file'])
+    ext = ext.lower()
+
+    prefix, mime = '', ''
+
+    if ext == '.pdf':
+        prefix = '[PDF] '
+        mime = ':application/pdf'
+    elif ext == '.html':
+        prefix = '[HTML] '
+        mime = ':text/html'
+
+    entry['file'] = prefix + entry['file'] + mime
 
 
 def key(row):
@@ -184,8 +218,7 @@ def parse_csv_file(args):
     with open(args.csv_file) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
-            row['Key'] = row['\ufeff"Key"']
-            if row['Item Type'] == 'journalArticle':
+            if row['Item Type'] in ['journalArticle', 'newspaperArticle']:
                 entry = article(row)
             elif row['Item Type'] == 'conferencePaper':
                 entry = inproceedings(row)
@@ -198,7 +231,7 @@ def parse_csv_file(args):
             elif row['Item Type'] == 'thesis':
                 entry = phdthesis(row)
             else:
-                print('ItemType not found')
+                print('ItemType not found: "{}"'.format(row['Item Type']))
                 sys.exit()
 
             db.entries.append(entry)
