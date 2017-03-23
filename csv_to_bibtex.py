@@ -44,7 +44,15 @@ def add_optionals(row, optionals, entry):
 
     if 'pages' in entry:
         entry['pages'] = re.sub('-', '--', entry['pages'])
-        entry['pages'] = re.sub(u'\u2014', '--', entry['pages'])
+        entry['pages'] = re.sub(u'\u2013|\u2014', '--', entry['pages'])
+
+    skips = list(optionals.values()) + ['File Attachments', 'Manual Tags',
+                                        'Author', 'Title', 'Item Type']
+    for old_key, value in row.items():
+        if value and old_key not in skips:
+            new_key = re.sub(r'\W', '', old_key).lower()
+            if new_key not in entry and new_key not in ['xufeffkey']:
+                entry[new_key] = row[old_key]
 
     file_field(row, entry)
     keywords(row, entry)
