@@ -44,6 +44,7 @@ def add_optionals(row, optionals, entry):
 
     if 'pages' in entry:
         entry['pages'] = re.sub('-', '--', entry['pages'])
+        entry['pages'] = re.sub(u'\u2014', '--', entry['pages'])
 
     file_field(row, entry)
     keywords(row, entry)
@@ -56,6 +57,9 @@ def add_requireds(row, entry_type):
         'ENTRYTYPE': entry_type,
         'author': row['Author'],
         'title': row['Title']}
+
+    entry['author'] = entry['author'].replace('; ', ' and ')
+
     return entry
 
 
@@ -220,17 +224,6 @@ def file_field(row, entry):
         elif ext == '.html':
             attachment = '{}:{}:text/html'.format(file_name, attachment)
 
-        # if ext == '.pdf' and len(attachment_list) > 1 and not i:
-        #     attachment = '[PDF] {}:{}:application/pdf'.format(
-        #         url.netloc, attachment)
-        # elif ext == '.pdf':
-        #     attachment = 'Snapshot:{}:application/pdf'.format(attachment)
-        # elif ext == '.html' and len(attachment_list) > 1 and not i:
-        #     attachment = '[HTML] {}:{}:text/html'.format(
-        #         url.netloc, attachment)
-        # elif ext == '.html':
-        #     attachment = 'Snapshot:{}:text/html'.format(attachment)
-
         attachments.append(attachment)
 
     entry['file'] = ';'.join(attachments)
@@ -251,6 +244,18 @@ def key(row):
     return '_'.join([author, title, year])
 
 
+def fix_columns_headers(old_row):
+    """R replace spaces in column headers with dots. We need to handle this."""
+
+    new_row = {}
+
+    for old_key, value in old_row.items():
+        new_key = old_key.replace('.', ' ').strip()
+        new_row[new_key] = old_row[old_key]
+
+    return new_row
+
+
 def parse_csv_file(args):
     """Parse a CSV file into bibtex format."""
 
@@ -260,6 +265,8 @@ def parse_csv_file(args):
     with open(args.csv_file) as csv_file:
         reader = csv.DictReader(csv_file)
         for row in reader:
+            row = fix_columns_headers(row)
+
             if row['Item Type'] in ['journalArticle', 'newspaperArticle']:
                 entry = article(row)
             elif row['Item Type'] == 'conferencePaper':
