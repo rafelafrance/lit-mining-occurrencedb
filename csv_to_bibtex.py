@@ -6,13 +6,181 @@ import csv
 import sys
 import argparse
 import textwrap
-from urllib.parse import urlparse
 from nltk.corpus import stopwords
 from bibtexparser.bwriter import BibTexWriter
 from bibtexparser.bibdatabase import BibDatabase
 
 
 STOP_WORDS = stopwords.words('english')
+
+HEADERS = {
+    'Abstract Note': 'abstract',
+    'File Attachments': 'file',
+    'Manual Tags': 'keywords',
+    'Publication Title': 'journal',
+    'Publication Year': 'year',
+    'Publisher': 'publisher',
+    # 'Publication Title': 'booktitle',
+    # 'Publisher': 'institution',
+    # 'Publisher': 'school',
+}
+
+TYPES = {
+    'journalArticle': {
+        'type': 'article',
+        'remap': {}},
+    'newspaperArticle': {
+        'type': 'article',
+        'remap': {}},
+    'magazineArticle': {
+        'type': 'article',
+        'remap': {}},
+    'conferencePaper': {
+        'type': 'inproceedings',
+        'remap': {'Publication Title', 'booktitle'}},
+    'book': {
+        'type': 'book',
+        'remap': {'Publication Title', 'booktitle'}},
+    'bookSection': {
+        'type': 'incollection',
+        'remap': {'Publication Title', 'booktitle'}},
+    'report': {
+        'type': 'techreport',
+        'remap': {'Publisher', 'institution'}},
+    'thesis': {
+        'type': 'phdthesis',
+        'remap': {'Publisher', 'school'}},
+    'webpage': {
+        'type': 'unpublished',
+        'remap': {}},
+}
+
+
+def add_entry(row, entry_type, remap):
+    """Add an entry to the bibtex"""
+
+    entry = {'ID': entry_key(row), 'ENTRYTYPE': entry_type}
+
+    for header, value in row.items():
+        if not value:
+            continue
+        elif header in ['Item Type', '']:
+            continue
+        elif re.match(r'(x.*)?key', header, re.IGNORECASE):
+            continue
+        elif header in remap:
+            entry[remap[header]] = value
+        elif header in HEADERS:
+            entry[HEADERS[header]] = value
+        else:
+            bibtex = re.sub(r'\W', '', header).lower()
+            entry[bibtex] = value
+
+    entry['author'] = entry['author'].replace('; ', ' and ')
+
+    if 'file' in entry:
+        entry['file'] = entry_file(entry['file'])
+
+    if 'keywords' in entry:
+        entry['keywords'] = entry_keywords(entry['keywords'])
+
+    return entry
+
+
+def entry_key(row):
+    """Build the bibtex key."""
+
+    author = row['Author'].split()[0].lower()
+    author = re.sub(r'\W+$', '', author)
+
+    words = [w for w in row['Title'].lower().split() if w not in STOP_WORDS]
+    title = words[0].lower() if words else 'anon'
+
+    year = row['Publication Year'].split()
+    year = year[0].lower() if year else '????'
+
+    return '_'.join([author, title, year])
+
+
+def entry_keywords(value):
+    """Build the bibtex keywords field."""
+
+    keywords = []
+
+    for word in value.split(';'):
+        word = word.strip()
+        keywords.append(word)
+
+    return ', '.join(keywords)
+
+
+def entry_file(value):
+    """Build the bibtex file field."""
+
+    attachments = []
+    attachment_list = value.split(';')
+
+    for attachment in attachment_list:
+        attachment = attachment.strip()
+
+        if attachment.startswith('dn='):
+            continue
+        elif attachment.startswith('res='):
+            if attachment.endswith('.html'):
+                attachment += ':text/html'
+            continue
+
+        file_name = re.split(r'[/\\]\s*', attachment)[-1]
+        _, ext = os.path.splitext(attachment.lower())
+        attachment = re.sub(r'\\', r'\\\\', attachment)
+        attachment = re.sub(r':', r'\\:', attachment)
+
+        if ext == '.pdf':
+            attachment = '{}:{}:application/pdf'.format(file_name, attachment)
+        elif ext == '.html':
+            attachment = '{}:{}:text/html'.format(file_name, attachment)
+
+        attachments.append(attachment)
+
+    return ';'.join(attachments)
+
+
+def fix_columns_headers(old_row):
+    """R replace spaces in column headers with dots. We need to handle this."""
+
+    new_row = {}
+
+    for old_key, value in old_row.items():
+        new_key = old_key.replace('.', ' ').strip()
+        new_row[new_key] = value
+
+    return new_row
+
+
+def parse_csv_file(args):
+    """Parse a CSV file into bibtex format."""
+
+    bibtex_db = BibDatabase()
+
+    with open(args.csv_file) as csv_file:
+        reader = csv.DictReader(csv_file)
+
+        for row in reader:
+            row = fix_columns_headers(row)
+
+            if row['Item Type'] not in TYPES:
+                print('ItemType not found: "{}"'.format(row['Item Type']))
+                sys.exit()
+
+            row_type = TYPES[row['Item Type']]
+
+            entry = add_entry(row, row_type['type'], row_type['remap'])
+
+            bibtex_db.entries.append(entry)
+
+    writer = BibTexWriter()
+    with open(args.bibtex_file, 'w') as bibtex_file:
+        bibtex_file.write(writer.write(bibtex_db))
 
 
 def parse_command_line():
@@ -35,270 +203,7 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def add_optionals(row, optionals, entry):
-    """Put optional fields into the entry."""
-
-    for bib, csv in optionals.items():
-        if row.get(csv):
-            entry[bib] = row[csv]
-
-    if 'pages' in entry:
-        entry['pages'] = re.sub('-', '--', entry['pages'])
-        entry['pages'] = re.sub(u'\u2013|\u2014', '--', entry['pages'])
-
-    skips = list(optionals.values()) + ['File Attachments', 'Manual Tags',
-                                        'Author', 'Title', 'Item Type']
-    for old_key, value in row.items():
-        if value and old_key not in skips:
-            new_key = re.sub(r'\W', '', old_key).lower()
-            if new_key not in entry and new_key not in ['xufeffkey']:
-                entry[new_key] = row[old_key]
-
-    file_field(row, entry)
-    keywords(row, entry)
-
-
-def add_requireds(row, entry_type):
-    """Build an entry with the required fields"""
-    entry = {
-        'ID': key(row),
-        'ENTRYTYPE': entry_type,
-        'author': row['Author'],
-        'title': row['Title']}
-
-    entry['author'] = entry['author'].replace('; ', ' and ')
-
-    return entry
-
-
-def article(row):
-    """Put dict into a bibtex article."""
-
-    entry = add_requireds(row, 'article')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'pages': 'Pages',
-        'month': 'Month',
-        'volume': 'Volume',
-        'abstract': 'Abstract Note',
-        'journal': 'Publication Title',
-        'shorttitle': 'Short Title'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def inproceedings(row):
-    """Put dict into a bibtex inproceedings."""
-
-    entry = add_requireds(row, 'inproceedings')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'pages': 'Pages',
-        'volume': 'Volume',
-        'abstract': 'Abstract Note',
-        'publisher': 'Publisher',
-        'booktitle': 'Publication Title',
-        'shorttitle': 'Short Title'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def book(row):
-    """Put dict into a bibtex inproceedings."""
-
-    entry = add_requireds(row, 'book')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'pages': 'Pages',
-        'editor': 'Editor',
-        'abstract': 'Abstract Note',
-        'publisher': 'Publisher',
-        'shorttitle': 'Short Title'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def incollection(row):
-    """Put dict into a bibtex inproceedings."""
-
-    entry = add_requireds(row, 'incollection')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'pages': 'Pages',
-        'editor': 'Editor',
-        'abstract': 'Abstract Note',
-        'publisher': 'Publisher',
-        'booktitle': 'Publication Title',
-        'shorttitle': 'Short Title'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def techreport(row):
-    """Put dict into a bibtex inproceedings."""
-
-    entry = add_requireds(row, 'techreport')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'abstract': 'Abstract Note',
-        'institution': 'Publisher'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def phdthesis(row):
-    """Put dict into a bibtex inproceedings."""
-
-    entry = add_requireds(row, 'phdthesis')
-
-    optionals = {
-        'url': 'Url',
-        'note': 'Note',
-        'date': 'Date',
-        'year': 'Publication Year',
-        'school': 'Publisher',
-        'abstract': 'Abstract Note'}
-    add_optionals(row, optionals, entry)
-
-    return entry
-
-
-def keywords(row, entry):
-    """Build the bibtex keywords field."""
-
-    keywords = []
-
-    for word in row['Manual Tags'].split(';'):
-        word = word.strip()
-        keywords.append(word)
-
-    entry['keywords'] = ', '.join(keywords)
-
-
-def file_field(row, entry):
-    """Build the bibtex file field."""
-
-    # entry['file'] = row['File Attachments']
-
-    if not row['File Attachments']:
-        return
-
-    url = urlparse(row['Url'])
-
-    attachments = []
-    attachment_list = row['File Attachments'].split(';')
-    for i, attachment in enumerate(attachment_list):
-        attachment = attachment.strip()
-
-        if attachment.startswith('dn='):
-            continue
-        elif attachment.startswith('res='):
-            if attachment.endswith('.html'):
-                attachment += ':text/html'
-            continue
-
-        file_name = re.split(r'[/\\]\s*', attachment)[-1]
-        _, ext = os.path.splitext(attachment.lower())
-        attachment = re.sub(r'\\', r'\\\\', attachment)
-        attachment = re.sub(r':', r'\\:', attachment)
-
-        if ext == '.pdf':
-            attachment = '{}:{}:application/pdf'.format(file_name, attachment)
-        elif ext == '.html':
-            attachment = '{}:{}:text/html'.format(file_name, attachment)
-
-        attachments.append(attachment)
-
-    entry['file'] = ';'.join(attachments)
-
-
-def key(row):
-    """Build the bibtex key."""
-
-    author = row['Author'].split()[0].lower()
-    author = re.sub(r'\W+$', '', author)
-
-    words = [w for w in row['Title'].lower().split() if w not in STOP_WORDS]
-    title = words[0].lower() if words else 'anon'
-
-    year = row['Publication Year'].split()
-    year = year[0].lower() if year else '????'
-
-    return '_'.join([author, title, year])
-
-
-def fix_columns_headers(old_row):
-    """R replace spaces in column headers with dots. We need to handle this."""
-
-    new_row = {}
-
-    for old_key, value in old_row.items():
-        new_key = old_key.replace('.', ' ').strip()
-        new_row[new_key] = old_row[old_key]
-
-    return new_row
-
-
-def parse_csv_file(args):
-    """Parse a CSV file into bibtex format."""
-
-    db = BibDatabase()
-    entries = []
-
-    with open(args.csv_file) as csv_file:
-        reader = csv.DictReader(csv_file)
-        for row in reader:
-            row = fix_columns_headers(row)
-
-            if row['Item Type'] in ['journalArticle', 'newspaperArticle']:
-                entry = article(row)
-            elif row['Item Type'] == 'conferencePaper':
-                entry = inproceedings(row)
-            elif row['Item Type'] == 'book':
-                entry = book(row)
-            elif row['Item Type'] == 'bookSection':
-                entry = incollection(row)
-            elif row['Item Type'] == 'report':
-                entry = techreport(row)
-            elif row['Item Type'] == 'thesis':
-                entry = phdthesis(row)
-            else:
-                print('ItemType not found: "{}"'.format(row['Item Type']))
-                sys.exit()
-
-            db.entries.append(entry)
-
-    writer = BibTexWriter()
-    with open(args.bibtex_file, 'w') as bibtex_file:
-        bibtex_file.write(writer.write(db))
-
-
 if __name__ == '__main__':
 
-    args = parse_command_line()
-    parse_csv_file(args)
+    ARGS = parse_command_line()
+    parse_csv_file(ARGS)
