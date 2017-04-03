@@ -76,7 +76,11 @@ def add_entry(row, entry_type, remap):
         entry['pages'] = re.sub(u'\u2013|\u2014', '--', entry['pages'])
 
     if 'file' in entry:
-        entry['file'] = entry_file(entry['file'], entry['ID'])
+        files = entry_file(entry['file'], entry['ID'])
+        if files:
+            entry['file'] = files
+        else:
+            del entry['file']
 
     if 'keywords' in entry:
         entry['keywords'] = entry_keywords(entry['keywords'])
@@ -120,21 +124,18 @@ def entry_file(value, key):
     for attachment in attachment_list:
         attachment = attachment.strip()
 
-        if attachment.startswith('dn='):
+        if attachment.startswith(('dn=', 'res=')):
             continue
-        elif attachment.startswith('res='):
-            if attachment.endswith('.html'):
-                attachment += ':text/html'
+        if 'documentSummary' in attachment:
             continue
 
-        # file_name = re.split(r'[/\\]\s*', attachment)[-1]
         _, ext = os.path.splitext(attachment.lower())
         attachment = re.sub(r'\\', r'\\\\', attachment)
         attachment = re.sub(r':', r'\\:', attachment)
 
         if ext == '.pdf':
             attachment = '{}_pdf:{}:application/pdf'.format(key, attachment)
-        elif ext == '.html':
+        else:
             attachment = '{}_html:{}:text/html'.format(key, attachment)
 
         attachments.append(attachment)
@@ -143,7 +144,8 @@ def entry_file(value, key):
 
 
 def fix_columns_headers(old_row):
-    """R replace spaces in column headers with dots. We need to handle this."""
+    """R replaces spaces in column headers with dots. We need to handle this.
+    """
 
     new_row = {}
 
@@ -179,6 +181,7 @@ def parse_csv_file(args):
             bibtex_db.entries.append(entry)
 
     writer = BibTexWriter()
+    writer.order_entries_by = None
     with open(args.bibtex_file, 'w') as bibtex_file:
         bibtex_file.write(writer.write(bibtex_db))
 
