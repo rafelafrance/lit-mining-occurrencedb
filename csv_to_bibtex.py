@@ -167,7 +167,11 @@ def parse_csv_file(args):
     with open(args.csv_file) as csv_file:
         reader = csv.DictReader(csv_file)
 
-        for row in reader:
+        for i, row in enumerate(reader, 1):
+
+            if i < args.starting_row:
+                continue
+
             row = fix_columns_headers(row)
 
             if row['Item Type'] not in TYPES:
@@ -196,11 +200,16 @@ def parse_command_line():
         description=textwrap.dedent(description))
 
     group = parser.add_argument_group('required arguments')
+
     group.add_argument('-c', '--csv-file', required=True, metavar='CSV',
                        help='Input CSV file containing the bibliographic '
                             'entries.')
 
     group.add_argument('-b', '--bibtex-file', required=True, metavar='BIBTEX',
+                       help='Output Bibtex file.')
+
+    group.add_argument('-s', '--starting-row', metavar='ROW', default=0,
+                       type=int,
                        help='Output Bibtex file.')
 
     return parser.parse_args()
