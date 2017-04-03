@@ -19,11 +19,7 @@ HEADERS = {
     'Manual Tags': 'keywords',
     'Publication Title': 'journal',
     'Publication Year': 'year',
-    'Publisher': 'publisher',
-    # 'Publication Title': 'booktitle',
-    # 'Publisher': 'institution',
-    # 'Publisher': 'school',
-}
+    'Publisher': 'publisher'}
 
 TYPES = {
     'journalArticle': {
@@ -52,8 +48,7 @@ TYPES = {
         'remap': {'Publisher': 'school'}},
     'webpage': {
         'type': 'unpublished',
-        'remap': {}},
-}
+        'remap': {}}}
 
 
 def add_entry(row, entry_type, remap):
@@ -76,8 +71,12 @@ def add_entry(row, entry_type, remap):
 
     entry['author'] = entry['author'].replace('; ', ' and ')
 
+    if 'pages' in entry:
+        entry['pages'] = re.sub('-', '--', entry['pages'])
+        entry['pages'] = re.sub(u'\u2013|\u2014', '--', entry['pages'])
+
     if 'file' in entry:
-        entry['file'] = entry_file(entry['file'])
+        entry['file'] = entry_file(entry['file'], entry['ID'])
 
     if 'keywords' in entry:
         entry['keywords'] = entry_keywords(entry['keywords'])
@@ -112,7 +111,7 @@ def entry_keywords(value):
     return ', '.join(keywords)
 
 
-def entry_file(value):
+def entry_file(value, key):
     """Build the bibtex file field."""
 
     attachments = []
@@ -128,15 +127,15 @@ def entry_file(value):
                 attachment += ':text/html'
             continue
 
-        file_name = re.split(r'[/\\]\s*', attachment)[-1]
+        # file_name = re.split(r'[/\\]\s*', attachment)[-1]
         _, ext = os.path.splitext(attachment.lower())
         attachment = re.sub(r'\\', r'\\\\', attachment)
         attachment = re.sub(r':', r'\\:', attachment)
 
         if ext == '.pdf':
-            attachment = '{}:{}:application/pdf'.format(file_name, attachment)
+            attachment = '{}_pdf:{}:application/pdf'.format(key, attachment)
         elif ext == '.html':
-            attachment = '{}:{}:text/html'.format(file_name, attachment)
+            attachment = '{}_html:{}:text/html'.format(key, attachment)
 
         attachments.append(attachment)
 
