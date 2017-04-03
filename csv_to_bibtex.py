@@ -37,19 +37,19 @@ TYPES = {
         'remap': {}},
     'conferencePaper': {
         'type': 'inproceedings',
-        'remap': {'Publication Title', 'booktitle'}},
+        'remap': {'Publication Title': 'booktitle'}},
     'book': {
         'type': 'book',
-        'remap': {'Publication Title', 'booktitle'}},
+        'remap': {'Publication Title': 'booktitle'}},
     'bookSection': {
         'type': 'incollection',
-        'remap': {'Publication Title', 'booktitle'}},
+        'remap': {'Publication Title': 'booktitle'}},
     'report': {
         'type': 'techreport',
-        'remap': {'Publisher', 'institution'}},
+        'remap': {'Publisher': 'institution'}},
     'thesis': {
         'type': 'phdthesis',
-        'remap': {'Publisher', 'school'}},
+        'remap': {'Publisher': 'school'}},
     'webpage': {
         'type': 'unpublished',
         'remap': {}},
@@ -64,9 +64,7 @@ def add_entry(row, entry_type, remap):
     for header, value in row.items():
         if not value:
             continue
-        elif header in ['Item Type', '']:
-            continue
-        elif re.match(r'(x.*)?key', header, re.IGNORECASE):
+        elif header in ['Item Type', 'key', '']:
             continue
         elif header in remap:
             entry[remap[header]] = value
@@ -151,6 +149,9 @@ def fix_columns_headers(old_row):
     new_row = {}
 
     for old_key, value in old_row.items():
+        if re.match(r'(x.*)?key', old_key, re.IGNORECASE):
+            old_key = 'key'
+
         new_key = old_key.replace('.', ' ').strip()
         new_row[new_key] = value
 
