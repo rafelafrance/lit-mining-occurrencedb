@@ -3,13 +3,45 @@ place them into the given output directory.
 """
 
 import os
-import io
 import zipfile
 import fnmatch
 import tempfile
 import argparse
 import textwrap
 import subprocess
+
+
+def get_pdf_paths(pdf_dir):
+    """Walk the dir to get all of the PDFs."""
+
+    pdfs = []
+    for root, _, files in os.walk(pdf_dir):
+        for base_name in files:
+            if fnmatch.fnmatch(base_name, '*.pdf'):
+                file_name = os.path.join(root, base_name)
+                pdfs.append(file_name)
+
+    return pdfs
+
+
+def extract_zip(args, temp_dir):
+    """Extract the zip file into a temporary directory."""
+
+    with zipfile.ZipFile(args.zip_file) as z_file:
+        z_file.extractall(path=temp_dir)
+
+
+def pdf_to_text(args, pdf_path, tie_breaker):
+    """Extract the text from the PDF ad write it to a file."""
+
+    txt_name = os.path.basename(pdf_path) + '_{:04d}.txt'.format(tie_breaker)
+    txt_path = os.path.join(args.output_dir, txt_name)
+    quiet = '-q' if args.quiet else ''
+    cmd = "pdftotext {} '{}' '{}'".format(quiet, pdf_path, txt_path)
+    try:
+        subprocess.check_call(cmd, shell=True)
+    except:
+        pass
 
 
 def parse_command_line():
@@ -44,55 +76,25 @@ def parse_command_line():
     return parser.parse_args()
 
 
-def get_pdf_paths(pdf_dir):
-    """Walk the dir to get all of the PDFs."""
-
-    pdfs = []
-    for root, dir_names, files in os.walk(pdf_dir):
-        for base_name in files:
-            if fnmatch.fnmatch(base_name, '*.pdf'):
-                file_name = os.path.join(root, base_name)
-                pdfs.append(file_name)
-
-    return pdfs
-
-
-def extract_zip(args, temp_dir):
-    """Extract the zip file into a temporary directory."""
-
-    with zipfile.ZipFile(args.zip_file) as z_file:
-        z_file.extractall(path=temp_dir)
-
-
-def pdf_to_text(args, pdf_path, tie_breaker):
-    """Extract the text from the PDF ad write it to a file."""
-
-    txt_name = os.path.basename(pdf_path) + '_{:04d}.txt'.format(tie_breaker)
-    txt_path = os.path.join(args.output_dir, txt_name)
-    quiet = '-q' if args.quiet else ''
-    cmd = "pdftotext {} '{}' '{}'".format(quiet, pdf_path, txt_path)
-    subprocess.check_call(cmd, shell=True)
-
-
 if __name__ == '__main__':
 
-    args = parse_command_line()
+    ARGS = parse_command_line()
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory() as TEMP_DIR:
 
-        if args.zip_file:
-            extract_zip(args, temp_dir)
-            pdf_dir = temp_dir
+        if ARGS.zip_file:
+            extract_zip(ARGS, TEMP_DIR)
+            PDF_DIR = TEMP_DIR
         else:
-            pdf_dir = args.input_dir
+            PDF_DIR = ARGS.input_dir
 
-        os.makedirs(args.output_dir, exist_ok=True)
+        os.makedirs(ARGS.output_dir, exist_ok=True)
 
-        pdf_paths = get_pdf_paths(pdf_dir)
+        PDF_PATHS = get_pdf_paths(PDF_DIR)
 
-        for i, pdf_path in enumerate(pdf_paths, 1):
-            if not args.quiet:
-                print('Extracting:', pdf_path)
-            pdf_to_text(args, pdf_path, i)
+        for i, PDF_PATH in enumerate(PDF_PATHS, 1):
+            if not ARGS.quiet:
+                print('Extracting:', PDF_PATH)
+            pdf_to_text(ARGS, PDF_PATH, i)
 
-    print('Extracted: {} PDFs'.format(len(pdf_paths)))
+    print('Extracted: {} PDFs'.format(len(PDF_PATHS)))

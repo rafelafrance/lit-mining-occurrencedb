@@ -212,7 +212,7 @@ def parse_csv_file(args):
             entries.append(entry)
 
     if args.randomize:
-        entries = np.random.permutation(entries)
+        entries = np.random.permutation(entries)  # pylint: disable=no-member
 
     for i, beg in enumerate(range(0, len(entries), args.max_entries), 1):
         file_name = args.bibtex_file
