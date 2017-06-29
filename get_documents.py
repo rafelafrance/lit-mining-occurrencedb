@@ -29,12 +29,6 @@ def get_item_documents(zot, key):
     return [DotDict(c) for c in zot.children(key)]
 
 
-def get_file_name(doc):
-    """We need file names with tie breakers."""
-
-    return '{}_{}'.format(doc.key, doc.data.filename.replace("'", ''))
-
-
 def get_pdfs(args):
     """Pull the PDFs from the Zotero cache."""
 
@@ -63,7 +57,7 @@ def get_pdfs(args):
         else:
             doc = pdfs[0]
             print(doc.data.filename)
-            zot.dump(doc.key, get_file_name(doc), path)
+            zot.dump(doc.key, '{}.pdf'.format(doc.key), path)
 
 
 def parse_command_line():

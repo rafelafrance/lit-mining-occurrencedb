@@ -1,10 +1,8 @@
 .ipynb_checkpoints/
-junk.*
-temp.*
 .~lock*
-temp/
+*.pyc
 __pycache__/
 venv/
+temp/
 old/
-*.pyc
 data/

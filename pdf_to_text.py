@@ -31,16 +31,17 @@ def extract_zip(args, temp_dir):
         z_file.extractall(path=temp_dir)
 
 
-def pdf_to_text(args, pdf_path, tie_breaker):
+def pdf_to_text(args, pdf_path):
     """Extract the text from the PDF ad write it to a file."""
 
-    txt_name = os.path.basename(pdf_path) + '_{:04d}.txt'.format(tie_breaker)
+    txt_name = os.path.basename(pdf_path)
+    txt_name = os.path.splitext(txt_name)[0] + '.txt'
     txt_path = os.path.join(args.output_dir, txt_name)
     quiet = '-q' if args.quiet else ''
     cmd = "pdftotext {} '{}' '{}'".format(quiet, pdf_path, txt_path)
     try:
         subprocess.check_call(cmd, shell=True)
-    except:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
@@ -95,6 +96,6 @@ if __name__ == '__main__':
         for i, PDF_PATH in enumerate(PDF_PATHS, 1):
             if not ARGS.quiet:
                 print('Extracting:', PDF_PATH)
-            pdf_to_text(ARGS, PDF_PATH, i)
+            pdf_to_text(ARGS, PDF_PATH)
 
     print('Extracted: {} PDFs'.format(len(PDF_PATHS)))
