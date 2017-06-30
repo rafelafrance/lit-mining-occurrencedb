@@ -7,3 +7,4 @@ temp/
 old/
 data/
 save/
+secrets.py
