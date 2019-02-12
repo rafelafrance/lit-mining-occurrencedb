@@ -1,3 +1,5 @@
+secrets.py
+
 .ipynb_checkpoints/
 .~lock*
 *.pyc
@@ -7,4 +9,3 @@ temp/
 old/
 data/
 save/
-secrets.py

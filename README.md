@@ -9,7 +9,7 @@
 - It is recommended that you use a Python virtual environment for this project.
 - Optional: `virtualenv venv -p python3`
 - Optional: `source venv/bin/activate`
-- `pip install -r requirements.txt`
+- `pip3 install -r requirements.txt`
 
 ## Description
 
