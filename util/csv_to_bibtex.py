@@ -75,7 +75,7 @@ def add_entry(row, entry_type, remap):
 
     if 'pages' in entry:
         entry['pages'] = re.sub('-', '--', entry['pages'])
-        entry['pages'] = re.sub(u'\u2013|\u2014', '--', entry['pages'])
+        entry['pages'] = re.sub(u'[\u2013\u2014]', '--', entry['pages'])
 
     if 'file' in entry:
         files = entry_file(entry['file'], entry['ID'])

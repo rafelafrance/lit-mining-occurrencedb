@@ -1,5 +1,6 @@
 secrets.py
 
+.idea
 .ipynb_checkpoints/
 .~lock*
 *.pyc
